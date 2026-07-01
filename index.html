@@ -38,10 +38,8 @@
                     <option value="JTIEB">JTIEB</option>
                 </select>
 
-                <!-- Filter Program Studi Baru -->
                 <select id="filterProdi" class="border border-slate-300 rounded-lg px-4 py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                     <option value="All">Semua Prodi</option>
-                    <!-- Options populated by JS -->
                 </select>
 
                 <select id="filterJenis" class="border border-slate-300 rounded-lg px-4 py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
@@ -95,11 +93,17 @@
 
         <!-- Data Table -->
         <div class="glass-card p-6">
-            <div class="flex justify-between items-center mb-4">
+            <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
                 <h3 class="text-lg font-bold text-slate-700">Daftar Detail Proyek</h3>
-                <button onclick="openModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
-                    <i class="fas fa-plus mr-2"></i> Tambah Data
-                </button>
+                <div class="flex gap-2">
+                    <!-- Tombol Ekspor Excel Baru -->
+                    <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2">
+                        <i class="fas fa-file-excel"></i> Ekspor Excel
+                    </button>
+                    <button onclick="openModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2">
+                        <i class="fas fa-plus"></i> Tambah Data
+                    </button>
+                </div>
             </div>
             <div class="table-container rounded-lg border border-slate-200">
                 <table class="w-full text-left border-collapse">
@@ -115,7 +119,6 @@
                         </tr>
                     </thead>
                     <tbody id="tableBody" class="text-sm divide-y divide-slate-100">
-                        <!-- Rows will be populated by JS -->
                     </tbody>
                 </table>
             </div>
@@ -202,7 +205,6 @@
         };
 
         function initDashboard() {
-            // Isi dropdown Prodi
             populateProdiFilter();
             
             document.getElementById('filterJurusan').addEventListener('change', applyFilters);
@@ -217,22 +219,17 @@
         function populateProdiFilter() {
             const filterProdi = document.getElementById('filterProdi');
             const datalistProdi = document.getElementById('prodiOptions');
-            
-            // Ambil prodi unik dari data yang ada
             const uniqueProdi = [...new Set(rawData.map(item => item['Program Studi']))].sort();
             
-            // Reset isi selain opsi "All"
             filterProdi.innerHTML = '<option value="All">Semua Prodi</option>';
             datalistProdi.innerHTML = '';
             
             uniqueProdi.forEach(prodi => {
-                // Untuk Dropdown Filter
                 const option = document.createElement('option');
                 option.value = prodi;
                 option.textContent = prodi;
                 filterProdi.appendChild(option);
                 
-                // Untuk Form Autocomplete (Datalist)
                 const dataOption = document.createElement('option');
                 dataOption.value = prodi;
                 datalistProdi.appendChild(dataOption);
@@ -255,8 +252,6 @@
                 const matchJenisFixed = filterJenis === 'All' || formJenisMap === fJenis;
 
                 const matchSumber = filterSumber === 'All' || row['Sumber Hibah'] === filterSumber;
-                
-                // Pencarian ikut mencari nama Prodi juga
                 const matchSearch = row.Judul.toLowerCase().includes(searchQ) || 
                                     row.Ketua.toLowerCase().includes(searchQ) || 
                                     row['Program Studi'].toLowerCase().includes(searchQ);
@@ -299,7 +294,6 @@
                 
                 let badgeJenis = (row.Jenis === 'Penelitian') ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700';
                 let displayJenis = (row.Jenis === 'Penelitian') ? 'Penelitian' : 'Pengmas';
-                
                 let badgeSumber = (row['Sumber Hibah'] === 'Internal ITK') ? 'bg-emerald-100 text-emerald-700' : 'bg-purple-100 text-purple-700';
 
                 tr.innerHTML = `
@@ -376,6 +370,42 @@
             });
         }
         
+        // ==================== FITUR EKSPOR EXCEL (CSV COMPATIBLE) ====================
+        function exportToExcel() {
+            if (currentData.length === 0) {
+                alert("Tidak ada data untuk diekspor!");
+                return;
+            }
+            
+            // Menggunakan tanda pengenal sep=; dan BOM agar terbaca rapi oleh Excel regional Indonesia/Global
+            let csvContent = "\uFEFFsep=;\nKetua Pengusul;Judul Proyek;Jurusan;Program Studi;Jenis Kegiatan;Sumber Hibah;Dana Pendanaan (Rp)\n";
+            
+            currentData.forEach(row => {
+                // Bersihkan teks dari tanda kutip ganda internal untuk mencegah broken layout di excel
+                const ketua = `"${row.Ketua.replace(/"/g, '""')}"`;
+                const judul = `"${row.Judul.replace(/"/g, '""')}"`;
+                const jurusan = `"${row.Jurusan.replace(/"/g, '""')}"`;
+                const prodi = `"${row['Program Studi'].replace(/"/g, '""')}"`;
+                const jenis = `"${(row.Jenis === 'Penelitian' ? 'Penelitian' : 'Pengmas')}"`;
+                const sumber = `"${row['Sumber Hibah'].replace(/"/g, '""')}"`;
+                const dana = row.Dana;
+                
+                csvContent += `${ketua};${judul};${jurusan};${prodi};${jenis};${sumber};${dana}\n`;
+            });
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            
+            // Set nama file sesuai filter atau default
+            link.setAttribute("href", url);
+            link.setAttribute("download", "Ekspor_Data_Hibah_2026.csv");
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
         function openModal() {
             document.getElementById('dataModal').classList.remove('hidden');
             document.getElementById('modalTitle').textContent = "Tambah Data Hibah";
@@ -439,10 +469,7 @@
             }
 
             localStorage.setItem('hibahData2026', JSON.stringify(rawData));
-            
-            // Perbarui list prodi jika ada prodi baru yang diinput
             populateProdiFilter();
-            
             closeModal();
             applyFilters();
             
