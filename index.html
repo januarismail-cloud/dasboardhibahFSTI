@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Interaktif Hibah 2026</title>
+    <title>Sistem Informasi Data Hibah Fakultas</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -13,6 +13,14 @@
         .table-container { max-height: 500px; overflow-y: auto; }
         th { position: sticky; top: 0; background-color: #f1f5f9; z-index: 10; }
         .modal-overlay { background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); z-index: 50; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .tab-btn.active { border-bottom: 2px solid #4f46e5; color: #4f46e5; font-weight: bold; }
+        .tab-btn { color: #64748b; font-weight: 500; }
+        .tab-btn:hover:not(.active) { color: #4f46e5; }
     </style>
 </head>
 <body class="text-slate-800 p-4 md:p-8">
@@ -21,8 +29,8 @@
         <!-- Header -->
         <header class="mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
-                <h1 class="text-3xl font-bold text-slate-900"><i class="fas fa-chart-pie text-indigo-600 mr-2"></i>Dashboard Hibah 2026</h1>
-                <p class="text-slate-500 mt-1">Sistem Manajemen Data Penelitian & Pengabdian Masyarakat</p>
+                <h1 class="text-3xl font-bold text-slate-900"><i class="fas fa-network-wired text-indigo-600 mr-2"></i>Sistem Informasi Hibah</h1>
+                <p class="text-slate-500 mt-1">Manajemen Data Penelitian & Pengabdian Fakultas Sains dan Teknologi Informasi</p>
             </div>
             
             <div class="flex gap-3 flex-wrap justify-end">
@@ -95,8 +103,10 @@
         <div class="glass-card p-6">
             <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
                 <h3 class="text-lg font-bold text-slate-700">Daftar Detail Proyek</h3>
-                <div class="flex gap-2">
-                    <!-- Tombol Ekspor Excel Baru -->
+                <div class="flex gap-2 flex-wrap">
+                    <button onclick="openRoadmap()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2">
+                        <i class="fas fa-project-diagram"></i> Generate Klaster & Roadmap
+                    </button>
                     <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2">
                         <i class="fas fa-file-excel"></i> Ekspor Excel
                     </button>
@@ -125,30 +135,52 @@
         </div>
     </div>
 
-    <!-- Modal Form Tambah/Edit -->
+    <!-- Modal Roadmap Fakultas -->
+    <div id="roadmapModal" class="fixed inset-0 modal-overlay flex items-center justify-center hidden">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-6xl h-[90vh] flex flex-col p-6 relative overflow-hidden">
+            <button onclick="closeRoadmap()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 z-10"><i class="fas fa-times text-2xl"></i></button>
+            <h2 class="text-2xl font-bold mb-2 text-slate-800"><i class="fas fa-layer-group text-indigo-600 mr-2"></i>Klasterisasi Riset Fakultas</h2>
+            <p class="text-sm text-slate-500 mb-4">Pemetaan otomatis berdasarkan NLP (Natural Language Processing) dari judul penelitian dan pengmas.</p>
+            
+            <!-- Tab Navigation -->
+            <div class="flex border-b border-slate-200 mb-4">
+                <button onclick="switchTab('tema')" id="btnTabTema" class="tab-btn active px-4 py-2 transition-colors">Berdasarkan Tema Topik</button>
+                <button onclick="switchTab('metode')" id="btnTabMetode" class="tab-btn px-4 py-2 transition-colors">Berdasarkan Metode</button>
+                <button onclick="switchTab('hasil')" id="btnTabHasil" class="tab-btn px-4 py-2 transition-colors">Berdasarkan Target Hasil</button>
+            </div>
+
+            <div class="overflow-y-auto flex-1 pr-2 pb-4">
+                <!-- Grid Tema (Default) -->
+                <div id="gridTema" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                <!-- Grid Metode -->
+                <div id="gridMetode" class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden"></div>
+                <!-- Grid Hasil -->
+                <div id="gridHasil" class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Form Tambah/Edit (Disederhanakan untuk space, tapi kode tetap sama) -->
     <div id="dataModal" class="fixed inset-0 modal-overlay flex items-center justify-center hidden">
         <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl p-6 relative">
             <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><i class="fas fa-times text-xl"></i></button>
             <h2 id="modalTitle" class="text-2xl font-bold mb-6 text-slate-800">Tambah Data Hibah</h2>
-            
             <form id="dataForm" onsubmit="saveData(event)">
                 <input type="hidden" id="formId">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="col-span-2 md:col-span-1">
                         <label class="block text-sm font-medium text-slate-700 mb-1">Nama Ketua</label>
-                        <input type="text" id="formKetua" required class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <input type="text" id="formKetua" required class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-indigo-500">
                     </div>
                     <div class="col-span-2 md:col-span-1">
                         <label class="block text-sm font-medium text-slate-700 mb-1">Program Studi</label>
-                        <input type="text" id="formProdi" required list="prodiOptions" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <input type="text" id="formProdi" required list="prodiOptions" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-indigo-500">
                         <datalist id="prodiOptions"></datalist>
                     </div>
-                    
                     <div class="col-span-2">
                         <label class="block text-sm font-medium text-slate-700 mb-1">Judul Proyek</label>
-                        <textarea id="formJudul" rows="2" required class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                        <textarea id="formJudul" rows="2" required class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-indigo-500"></textarea>
                     </div>
-
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Jurusan</label>
                         <select id="formJurusan" required class="w-full border border-slate-300 rounded-lg px-3 py-2">
@@ -163,7 +195,6 @@
                             <option value="Pengmas">Pengmas</option>
                         </select>
                     </div>
-
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Sumber Hibah</label>
                         <select id="formSumber" required class="w-full border border-slate-300 rounded-lg px-3 py-2">
@@ -173,10 +204,9 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Total Dana (Rp)</label>
-                        <input type="number" id="formDana" required min="0" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <input type="number" id="formDana" required min="0" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-indigo-500">
                     </div>
                 </div>
-
                 <div class="mt-6 flex justify-end gap-3">
                     <button type="button" onclick="closeModal()" class="px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50">Batal</button>
                     <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold">Simpan Data</button>
@@ -187,7 +217,6 @@
 
     <script>
         const defaultData = [{"Ketua": "Chairoh Ulfah, S.Si., M.Sc.", "Judul": "Optimalisasi Biokompatibilitas Nano- CHAp berbasis Cangkang Kerang Mutiara Air Tawar Margaritifera margaritifera sebagai Material Kandidat Implan Tulang", "Program Studi": "Fisika", "Jenis Kegiatan": "Penelitian", "Dana": 20000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 1}, {"Ketua": "Harrys Samosir, M.Sc.", "Judul": "Pengembangan Lapisan Tipis Nasbs₂ dan Sn–Sb–S Berbasis Metode Silar Sebagai Material Aktif Sel Surya Berbiaya Rendah", "Program Studi": "Fisika", "Jenis Kegiatan": "Penelitian", "Dana": 20000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 2}, {"Ketua": "Indrawan, S.Pd. M.Si.", "Judul": "Perbandingan Model Deep Learning GRU–GARCH dan DES–GARCH dalam Pemodelan Return dan Volatilitas Saham Syariah: Studi Kasus Telkom Indonesia (TLKM)", "Program Studi": "Ilmu Aktuaria", "Jenis Kegiatan": "Penelitian", "Dana": 20000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 3}, {"Ketua": "Magdalena Effendi, S.Stat., M.Stat.", "Judul": "Analisis Spasial Financial Distress Rumah Tangga di Kabupaten Penajam Paser Utara dalam Dinamika Pembangunan Ibu Kota Nusantara (IKN)", "Program Studi": "Statistika", "Jenis Kegiatan": "Penelitian", "Dana": 20000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 4}, {"Ketua": "Mega Pratiwi, M.Pd", "Judul": "Peningkatan Mutu Pembelajaran Mata Kuliah Bahasa Indonesia melalui Buku Panduan Dosen", "Program Studi": "Matematika", "Jenis Kegiatan": "Penelitian", "Dana": 20000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 5}, {"Ketua": "Nurul Maqfirah Rauf, M.Mat.", "Judul": "Pemodelan Risiko Mortalitas Pasien Penyakit Paru Menggunakan Cox Regression dan Gradient Boosting Survival Di RS Pertamina Balikpapan", "Program Studi": "Ilmu Aktuaria", "Jenis Kegiatan": "Penelitian", "Dana": 20000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 6}, {"Ketua": "Putri Amalia, S.Si., M.Si.", "Judul": "Pemodelan Dinamika Tata Ruang IKN dengan Pendekatan Kontrol Optimal untuk Mendukung Target 65% Forest City", "Program Studi": "Ilmu Aktuaria", "Jenis Kegiatan": "Penelitian", "Dana": 20000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 7}, {"Ketua": "Yumna Aqila Kaltsum, S.Si., M.Stat.", "Judul": "Analisis Peran Artificial Intelligence dan Infrastruktur Digital dalam Meningkatkan Keterlibatan Akademik dan Efektivitas Belajar Mahasiswa Institut Teknologi Kalimantan", "Program Studi": "Statistika", "Jenis Kegiatan": "Penelitian", "Dana": 20000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 8}, {"Ketua": "Isti Kamila, S.Pd., M.Si.", "Judul": "Integrasi Machine Learning dan Pemodelan Aktuaria dalam Penentuan Premi Asuransi Berbasis Indeks Curah Hujan untuk Mitigasi Risiko Petani Karet di Kalimantan Timur", "Program Studi": "Ilmu Aktuaria", "Jenis Kegiatan": "Penelitian", "Dana": 25000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 9}, {"Ketua": "Kartika Nugraheni, S.Si., M.Si.", "Judul": "Pemodelan Matematika dan Analisis Kestabilan Penyebaran Penyakit Antraks pada Populasi Ternak dengan Strategi Vaksinasi untuk Mendukung Ketahanan Pangan", "Program Studi": "Matematika", "Jenis Kegiatan": "Penelitian", "Dana": 25000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 10}, {"Ketua": "Dr. Retno Wahyu Dewanti, S.Si., M.Si.", "Judul": "Model Matematika Transmisi Penyebaran Covid-19 dengan Aspek Pencegahan Infeksi", "Program Studi": "Matematika", "Jenis Kegiatan": "Penelitian", "Dana": 25000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 11}, {"Ketua": "Surya Puspita Sari, S.Si., M.Si.", "Judul": "Deteksi Spasial Non-Revenue Water (NRW) Berbasis Sensor Tekanan dan Debit Menggunakan Diagram Kontrol MEWMA di Kota Balikpapan", "Program Studi": "Statistika", "Jenis Kegiatan": "Penelitian", "Dana": 25000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 12}, {"Ketua": "Winarni, S.Si., M.Si.", "Judul": "Pemanfaatan Sains Data Untuk Pemetaan dan Analisis Potensi Wilayah Rawan Gempa Bumi di Indonesia dalam Mendukung Mitigasi Bencana Berbasis Data", "Program Studi": "Matematika", "Jenis Kegiatan": "Penelitian", "Dana": 25000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 13}, {"Ketua": "Yanuar Bhakti Wira Tama, M.Si.", "Judul": "Kriptosistem Citra Grayscale Hibrida Berbasis Permutasi Chaos dan Difusi Matriks pada Gelanggang Z/256Z untuk Keamanan Data Visual", "Program Studi": "Matematika", "Jenis Kegiatan": "Penelitian", "Dana": 25000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 14}, {"Ketua": "Adam, S.Si., M.Si.", "Judul": "Optimasi Sistem Evakuasi Gedung Pemerintahan di Ibu Kota Nusantara Menggunakan Model Graf dan Program Linear", "Program Studi": "Matematika", "Jenis Kegiatan": "Penelitian", "Dana": 24999995, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 15}, {"Ketua": "Aditya Putra Pratama, S.Si., M.Si.", "Judul": "Pengembangan Model VARIMA untuk Prediksi Multivariat Kualitas Air di Wilayah Penyangga IKN", "Program Studi": "Matematika", "Jenis Kegiatan": "Penelitian", "Dana": 25000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 16}, {"Ketua": "Diana Nurlaily, S.Si., M.Stat.", "Judul": "Tipologi Wilayah Pertanian di Kalimantan Timur untuk Mendukung Ketahanan Pangan dalam Pembangunan Ibu Kota Nusantara", "Program Studi": "Statistika", "Jenis Kegiatan": "Penelitian", "Dana": 23000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 17}, {"Ketua": "Febrian Dedi Sastrawan, S.Si., M.Sc.", "Judul": "Klasifikasi Jenis Tanah Berdasarkan Nilai VS30 Berdasarkan Data Downhole Seismik", "Program Studi": "Fisika", "Jenis Kegiatan": "Penelitian", "Dana": 25000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 18}, {"Ketua": "Irma Fitria, S.Si., M.Si.", "Judul": "Smart Investment Optimization: Model Manajemen Investasi Berbasis Nilai Prediksi untuk Mendukung Smart Economy pada Pembangunan Ibu Kota Nusantara", "Program Studi": "Statistika", "Jenis Kegiatan": "Penelitian", "Dana": 25000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 19}, {"Ketua": "Mega Silfiani,S.Si., M.Si., M.Sc", "Judul": "Peramalan Produksi Padi Berbasis Iklim di Kalimantan Timur untuk Mendukung Ketahanan Pangan Ibukota Negara (IKN)", "Program Studi": "Statistika", "Jenis Kegiatan": "Penelitian", "Dana": 25000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 20}, {"Ketua": "Dr. Moh. Januar Ismail Burhan, S.Si., M.Si.", "Judul": "Epimap Nusantara: Desain Platform Cerdas Peringatan Dini Dan Intervensi Penyakit Menular Menggunakan Pemodelan Reaksi-Difusi Spasial Pada Graf Metrik", "Program Studi": "Matematika", "Jenis Kegiatan": "Penelitian", "Dana": 25000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 21}, {"Ketua": "Dian Mart Shoodiqin, S.Si., M.Si.", "Judul": "Rancang Bangun Prototipe Plasma Activated Water (PAW) Skala Laboratorium dan Evaluasi Pengaruhnya Terhadap Stabilitas Fisik dan Struktur Kimia Permukaan Sayuran Segar", "Program Studi": "Fisika", "Jenis Kegiatan": "Penelitian", "Dana": 25000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 22}, {"Ketua": "Fadli Robiandi, S.Si., M.Si.", "Judul": "Generator Plasma DBD Non-Termal Berbasis Pulsa Listrik Terkontrol Untuk Reaktor Produksi Hidrogen Bersih", "Program Studi": "Fisika", "Jenis Kegiatan": "Penelitian", "Dana": 25000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 23}, {"Ketua": "Farida Nur Hidayah, S.H., M.H", "Judul": "Pengembangan Standar Implementasi Terintegrasi Mata Kuliah Wajib Kurikulum (MKWK) di Institut Teknologi Kalimantan", "Program Studi": "Statistika", "Jenis Kegiatan": "Penelitian", "Dana": 23500000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 24}, {"Ketua": "Meidi Arisalwadi, S.Si. M.Si.", "Judul": "Penerapan Teknologi Tepat Guna Mesin Pencacah Pakan Dalam Mendukung Produktivitas Peternak Pada Rt. 18 Kelurahan Karang Joang", "Program Studi": "Fisika", "Jenis Kegiatan": "Penelitian", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 25}, {"Ketua": "Kevin Agung Fernanda Rifki, S.Stat, M.Stat", "Judul": "Pengembangan Aplikasi Gamifikasi untuk Meningkatkan Kemandirian Anak Down Syndrome dalam Aktivitas Sehari-hari", "Program Studi": "Statistika", "Jenis Kegiatan": "Penelitian", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 26}, {"Ketua": "Alvianus Kristian Sumual, S.E., M.E", "Judul": "Implementasi Sistem Filter Air Sederhana Berbasis Teknologi Tepat Guna (TTG) untuk Pemenuhan Air Bersih di Dusun 2 dan 3 Desa Suko Mulyo, Kecamatan Sepaku", "Program Studi": "Ilmu Aktuaria", "Jenis Kegiatan": "Penelitian", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 27}, {"Ketua": "Farida Nur Hidayah, S.H., M.H", "Judul": "Pengembangan Destinasi Wisata Melalui Strategi Pemasaran Digital dan Manajemen Data Terintegrasi Di Kelurahan Lamaru", "Program Studi": "Statistika", "Jenis Kegiatan": "Penelitian", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 28}, {"Ketua": "Alfi Suci Dirgantari, S.Pd., M.Pd.", "Judul": "Penerapan Incinerator Tanpa Asap sebagai Solusi Pengelolaan Sampah di Kawasan Wisata Meranti, Balikpapan", "Program Studi": "Fisika", "Jenis Kegiatan": "Penelitian", "Dana": 9966512, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 29}, {"Ketua": "Diana Nurlaily, S.Si., M.Stat.", "Judul": "Digitalisasi Tata Kelola Data Pariwisata Melalui Pengembangan Website Terintegrasi dan Pemetaan Wilayah (Tourism Mapping) di Kelurahan Manggar Baru", "Program Studi": "Statistika", "Jenis Kegiatan": "Penelitian", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 30}, {"Ketua": "Wahyu Dwi Lesmono, S.Si., M.Si.", "Judul": "Penataan Informasi dan Identitas Lingkungan Permukiman melalui Pemetaan Wilayah untuk Penguatan Tata Kelola RT 26 Karang Joang Balikpapan", "Program Studi": "Ilmu Aktuaria", "Jenis Kegiatan": "Penelitian", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 31}, {"Ketua": "Harrys Samosir, M.Sc.", "Judul": "Formulasi Lip Balm Herbal Berbasis Buah Naga dan Ekstrak Bawang Dayak sebagai Inovasi Pemanfaatan Bahan Alam Lokal", "Program Studi": "Fisika", "Jenis Kegiatan": "Penelitian", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 32}, {"Ketua": "Putri Amalia, S.Si., M.Si.", "Judul": "Penguatan Kualitas Pendidikan Anak di RT 38 Kilo 17 Melalui Pendekatan Edukatif dan Partisipatif", "Program Studi": "Ilmu Aktuaria", "Jenis Kegiatan": "Penelitian", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 33}, {"Ketua": "Irma Fitria, S.Si., M.Si.", "Judul": "Pengembangan Direktori Digital UMKM Berbasis Web Sebagai Sarana Peningkatan Aksesibilitas Ekonomi Kreatif Bagi Warga RT 33 Balikpapan Utara", "Program Studi": "Statistika", "Jenis Kegiatan": "Penelitian", "Dana": 5000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 34}, {"Ketua": "Febrian Dedi Sastrawan, S.Si., M.Sc.", "Judul": "Inovasi Pengolahan Kopi menjadi Minuman Fermentasi Kombucha sebagai Upaya Hilirisasi Produk di Kebun Kopi Kelompok Tani Harapan Sejahtera", "Program Studi": "Fisika", "Jenis Kegiatan": "Penelitian", "Dana": 15000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 35}, {"Ketua": "Winarni, S.Si., M.Si.", "Judul": "Penguatan Ketahanan Ekonomi Keluarga Melalui Literasi Keuangan Dan Perencanaan Usaha Berbasis Matematika Praktis Bagi Peserta Majelis Ta’lim Gabungan Batu Ratna Kota Balikpapan", "Program Studi": "Matematika", "Jenis Kegiatan": "Penelitian", "Dana": 15000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 36}, {"Ketua": "MEIDI ARISALWADI", "Judul": "Pengembangan Sistem Monitoring Pergeseran Tanah Secara Real-Time Menggunakan Sensor Accelerometer", "Program Studi": "Fisika", "Jenis Kegiatan": "Penelitian", "Dana": 115550000, "Sumber Hibah": "Eksternal BIMA", "Status": "Tahap Usulan", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 37}, {"Ketua": "MUSYAROFAH", "Judul": "Impregnasi Perak pada Nanokomposit HA/AC/Z Berbasis Material Alam sebagai Agen Abrasif Ringan dan Antimikroba dalam Formulasi Pasta Gigi", "Program Studi": "Fisika", "Jenis Kegiatan": "Penelitian", "Dana": 0, "Sumber Hibah": "Eksternal BIMA", "Status": "Tahap Usulan", "Jurusan": "JSAD", "Jenis": "Penelitian", "id": 38}, {"Ketua": "Farida Nur Hayati, S.Si., M.Stat.", "Judul": "Identifikasi Profil Sosial Ekonomi Rumah Tangga dalam Menggambarkan Kondisi Kesejahteraan Masyarakat Kalimantan Timur", "Program Studi": "Statistika", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 23000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Pengmas", "id": 39}, {"Ketua": "Surya Puspita Sari, S.Si., M.Si", "Judul": "Pembentukan Bank Sampah Komunitas Berbasis Ekonomi Sirkular sebagai Hilirisasi Riset dan Pengabdian di Wilayah Penyangga IKN", "Program Studi": "Statistika", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Pengmas", "id": 40}, {"Ketua": "Mega Silfiani,S.Si., M.Si., M.Sc", "Judul": "Pemberdayaan Masyarakat Dalam Pengelolaan Wisata Dan Kebersihan Pantai Dusit Markoni Untuk Meningkatkan Ekonomi Desa", "Program Studi": "Statistika", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Pengmas", "id": 41}, {"Ketua": "Adam, S.Si., M.Si.", "Judul": "Penguatan Digitalisasi Dalam Pemberdayaan LKSA Tarbiyatul Ummah Pada Bidang", "Program Studi": "Matematika", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Pengmas", "id": 42}, {"Ketua": "Yumna Aqila Kaltsum, S.Si., M.Stat.", "Judul": "Penerapan Teknologi Irigasi Tetes (Drip Irrigation) Berbasis Greenhouse Untuk Budidaya Tanaman Hortikultura Sebagai Wadah Edukasi Pertanian Modern Di Abas Farm", "Program Studi": "Statistika", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Pengmas", "id": 43}, {"Ketua": "Farida Nur Hayati, S.Si., M.Stat.", "Judul": "Inovasi Berbasis Digital dan Lingkungan Dalam Pemberdayaan Masyarakat RT 37 melalui Program Kampung Bersih Berkelanjutan", "Program Studi": "Statistika", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Pengmas", "id": 44}, {"Ketua": "Dr. Swastya Rahastama, S.Si., M.Si.", "Judul": "Pengembangan Kemampuan Sistem Cerdas Sejak Dini Melalui Edukasi Robotika di SMP Negeri 1 Kota Balikpapan", "Program Studi": "Fisika", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Pengmas", "id": 45}, {"Ketua": "Magdalena Effendi, S.Stat., M.Stat.", "Judul": "Penguatan Kompetensi Digital, Literasi, dan Kepedulian Lingkungan Siswa melalui Program Pengabdian kepada Masyarakat di SMP Negeri 28 Balikpapan", "Program Studi": "Statistika", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Pengmas", "id": 46}, {"Ketua": "Nurul Maqfirah Rauf, M.Mat.", "Judul": "Penguatan Manajemen Dan Pemasaran Digital Pada Umkm Sinar Pantai Melalui Penyuluhan, Pendampingan, Dan Analisis Usaha", "Program Studi": "Ilmu Aktuaria", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Pengmas", "id": 47}, {"Ketua": "Muhammad Azka, S.Si., M.Sc.", "Judul": "Peningkatan Kesadaran Masyarakat Dalam Pemilahan Sampah Organik Untuk Pakan Maggot Dan Sampah Anorganik Botol Di Perumahan Mentari Village", "Program Studi": "Ilmu Aktuaria", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Pengmas", "id": 48}, {"Ketua": "Kartika Nugraheni, S.Si., M.Si.", "Judul": "Peningkatan Literasi Digital Melalui Pelatihan Bahasa Pemrograman Python bagi Siswa SMA Negeri 2 Balikpapan", "Program Studi": "Matematika", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Pengmas", "id": 49}, {"Ketua": "Dian Mart Shoodiqin, S.Si., M.Si.", "Judul": "Pemberdayaan Kelompok Tani Karang Joang Melaluipengembangan Peternakan Ayam Kampung Petelur Berbasis Teknologi Tepat Guna", "Program Studi": "Fisika", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Pengmas", "id": 50}, {"Ketua": "Riki Herliansyah, S.Si., M.Stats., Ph.D", "Judul": "Transformasi Penguatan Pengelolaan Data Guna Meningkatkan Pemutakhiran dan Pemanfaatan Data Menuju Pembangunan dan Pemberdayaan Potensi di Kelurahan Manggar", "Program Studi": "Statistika", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Pengmas", "id": 51}, {"Ketua": "Yanuar Bhakti Wira Tama, M.Si.", "Judul": "Program Edukasi Bahaya Penggunaan Gadget Elektronik pada Anak-anak melalui Media", "Program Studi": "Matematika", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Pengmas", "id": 52}, {"Ketua": "Aditya Putra Pratama, S.Si., M.Si.", "Judul": "TOGA DIGITAL: Revitalisasi Budidaya dan Edukasi Digital Tanaman Obat Keluarga Berbasis Data di RT. 19 Kelurahan Lamaru Kota Balikpapan", "Program Studi": "Matematika", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Pengmas", "id": 53}, {"Ketua": "Eli Zulkatri, M.Aktr", "Judul": "Pojok Baca Berdaya: Pemberdayaan Anak Panti Lewat Literasi, Numerasi, Dan Literasi Finansial", "Program Studi": "Ilmu Aktuaria", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Pengmas", "id": 54}, {"Ketua": "Dr. Retno Wahyu Dewanti, S.Si., M.Si.", "Judul": "Peningkatan Kualitas Pendidikan Sebagai Wujud Pengabdian Masyarakat Di Kelurahan Karang Joang Kecamatan Balikpapan Utara", "Program Studi": "Matematika", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JSAD", "Jenis": "Pengmas", "id": 55}, {"Ketua": "ISTI KAMILA", "Judul": "Peningkatan Keterampilan Kelompok Swadaya Mentari KM 21 dalam Pembuatan Produk UMKM Green-Economy dari Sampah Rumah Tangga melalui Sistem Refill Station dan Manajemen Risiko Keuangan", "Program Studi": "Ilmu Aktuaria", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 0, "Sumber Hibah": "Eksternal BIMA", "Status": "Tahap Usulan", "Jurusan": "JSAD", "Jenis": "Pengmas", "id": 56}, {"Ketua": "Agung Prabowo, S.E., M.M.", "Judul": "Gachanomics: Analisis Perilaku Pembelian Produk Gacha", "Program Studi": "Bisnis Digital", "Jenis Kegiatan": "Penelitian", "Dana": 8210000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 57}, {"Ketua": "Aninditya Anggari Nuryono, S.T., M.Eng.", "Judul": "Pengembangan Metode Safe Landing Unmanned Aerial Vehicle pada", "Program Studi": "Informatika", "Jenis Kegiatan": "Penelitian", "Dana": 20000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 58}, {"Ketua": "Deli Yansyah, S.E., M.Acc., Ak.", "Judul": "Evaluasi Tingkat Penerimaan dan Pengalaman Pengguna Sistem Coretax pada Wajib Pajak Orang Pribadi di Indonesia", "Program Studi": "Bisnis Digital", "Jenis Kegiatan": "Penelitian", "Dana": 9000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 59}, {"Ketua": "Fegy Sukris Sri Andriany, M.Ak", "Judul": "Optimasi Algoritma Penyediaan Likuiditas Aset Digital Berbasis Monte Carlo Simulation dan Inventory Theory: Mitigasi Risiko Sistemik pada Bursa Kripto Indonesia", "Program Studi": "Bisnis Digital", "Jenis Kegiatan": "Penelitian", "Dana": 20000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 60}, {"Ketua": "Rosa Eliviani, S.Kom., M.T.", "Judul": "Penyusunan Manajemen Risiko Teknologi Informasi Pada Sekolah Islam Terpadu Istiqamah YPAIT Balikpapan Berdasarkan ISO 31000:2018", "Program Studi": "Sistem Informasi", "Jenis Kegiatan": "Penelitian", "Dana": 20000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 61}, {"Ketua": "Dwi Nur Amalia, S.Kom., M.Kom.", "Judul": "Implementasi Business Process Improvement untuk Redesain Proses Bisnis dalam Transformasi Web ke Mobile Employee Information System", "Program Studi": "Sistem Informasi", "Jenis Kegiatan": "Penelitian", "Dana": 25000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 62}, {"Ketua": "Gusti Ahmad Fanshuri Alfarisy, S.Kom., M.Kom. Ph.D.", "Judul": "Pengenalan Spesies Tumbuhan Skala Besar Berbasis Open-Set Recognition dengan Model Deep Learning Ringan", "Program Studi": "Informatika", "Jenis Kegiatan": "Penelitian", "Dana": 25000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 63}, {"Ketua": "Aidil Saputra Kirsan, S.ST., M.Tr.Kom.", "Judul": "Rancang Bangun Sistem Informasi Profil Fakultas Sains Dan Teknologi Informasi Institut Teknologi Kalimantan Berbasis Website Menggunakan Metode Prototyping", "Program Studi": "Sistem Informasi", "Jenis Kegiatan": "Penelitian", "Dana": 20000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 64}, {"Ketua": "Hendy Indrawan Sunardi, S.Kom, M.Eng.", "Judul": "Pengembangan Sistem Informasi Klinik Kampus Berbasis Web Untuk Meningkatkan Efektivitas Pelayanan Kesehatan di Institut Teknologi Kalimantan", "Program Studi": "Sistem Informasi", "Jenis Kegiatan": "Penelitian", "Dana": 20000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 65}, {"Ketua": "Dwi Arief Prambudi, S.Kom., M.Kom", "Judul": "Visualisasi dari Klasterisasi dan Peramalan Kualitas Udara Kota Samarinda Menggunakan Metode Klasterisasi Objek Backpropagation dan Peramalan Artificial Neural Network", "Program Studi": "Sistem Informasi", "Jenis Kegiatan": "Penelitian", "Dana": 25000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 66}, {"Ketua": "Muh. Ikhsan Alif S, S.E.,M.Sc.", "Judul": "Ketika Lelah Berujung Diam: Peran Kepuasan Kerja dan Keseimbangan Kerja dan Kehidupan, dalam Hubungan antara Kelelahan Kerja dan Penarikan Diri Secara Psikologis dari Pekerjaan (Quiet Quitting) pada Pekerja Muda Talenta Digital Berbasis Pengetahuan (Digital Knowledge Workers) di Kawasan Penyangga IKN - Kalimantan Timur", "Program Studi": "Bisnis Digital", "Jenis Kegiatan": "Penelitian", "Dana": 25000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 67}, {"Ketua": "Prasis Damai Nursyam Hamijaya, S.P., M.M.", "Judul": "Pengaruh Work-Life Balance, Technostress dan Kompetensi Digital Terhadap Kinerja Karyawan Industri Kreatif di Kawasan Penyangga IKN", "Program Studi": "Bisnis Digital", "Jenis Kegiatan": "Penelitian", "Dana": 25000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 68}, {"Ketua": "Rizky Amelia, S.Si., M.Han.", "Judul": "Deteksi dan Klasifikasi Kapal  Menggunakan Citra Satelit SAR Sentinel-1 dan Deep Learning Berbasis YOLOv8 untuk Pemantauan Aktivitas Maritim di Jalur ALKI II", "Program Studi": "Informatika", "Jenis Kegiatan": "Penelitian", "Dana": 25000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 69}, {"Ketua": "Amalia Rizqi Utami, S.T., M.T.", "Judul": "Rancang Bangun Sistem Deteksi Hidrasi Kulit Berbasis IoT Menggunakan Sensor EDA", "Program Studi": "Teknik Elektro", "Jenis Kegiatan": "Penelitian", "Dana": 25000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 70}, {"Ketua": "Firilia Filiana, S.T., M.T.", "Judul": "Rancang Bangun Prototipe PLTS Off-Grid Terintegrasi Smart Monitoring sebagai Sumber Energi Mandiri untuk Fasilitas Pengolahan Sampah di Kampus ITK", "Program Studi": "Teknik Elektro", "Jenis Kegiatan": "Penelitian", "Dana": 25000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 71}, {"Ketua": "Himawan Wicaksono, S.ST., M.T.", "Judul": "WeldInspector AI: Rancang Bangun Aplikasi Mobile Mandiri Berbasis Hybrid CNN-SVM untuk Deteksi Cacat Las di Galangan Kapal", "Program Studi": "Teknik Elektro", "Jenis Kegiatan": "Penelitian", "Dana": 25000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 72}, {"Ketua": "Luh Made Wisnu Satyaninggrat, S.Kom., M.T.", "Judul": "Transformasi Digital Manajemen Stok Usaha Mikro Kecil: Pengembangan Antarmuka Adaptif untuk Mereduksi Cognitive Load dan Meningkatkan Akurasi Keputusan Bisnis", "Program Studi": "Bisnis Digital", "Jenis Kegiatan": "Penelitian", "Dana": 25000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 73}, {"Ketua": "Ir. Muhammad Ridho Dewanto, S.T., M.T.", "Judul": "Pengembangan Sistem Autentikasi Alat Tukar Lokal (Uang Kayu) Berbasis QR Code dan Perceptual Hashing (pHash) untuk Mendukung Ekosistem Smart Economy di Kawasan Wisata Pringgondani", "Program Studi": "Teknik Elektro", "Jenis Kegiatan": "Penelitian", "Dana": 25000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 74}, {"Ketua": "Nisa Rizqiya Fadhliana, S.Kom., M.T.", "Judul": "Pengembangan Game Digital Naratif Interaktif sebagai Media Inovatif Membangun Environmental Awareness", "Program Studi": "Informatika", "Jenis Kegiatan": "Penelitian", "Dana": 25000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 75}, {"Ketua": "Nursanti Novi Arisa, S.Pd., M.Kom.", "Judul": "Perancangan UI/UX Media Visual Berbasis Digital dengan Pendekatan Discrete Trial Training untuk Anak dengan Gangguan Bahasa", "Program Studi": "Sistem Informasi", "Jenis Kegiatan": "Penelitian", "Dana": 25000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 76}, {"Ketua": "Risty Jayanti Yuniar, S.T., M.T.", "Judul": "Pengembangan Sistem Kontrol Suhu Alat Pengering Lada Menggunakan Metode Adaptive Neuro Fuzzy Inference System Berbasis Iot", "Program Studi": "Teknik Elektro", "Jenis Kegiatan": "Penelitian", "Dana": 25000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 77}, {"Ketua": "Riza Hadi Saputra, S.T., M.T.", "Judul": "Analisis Stabilitas Rest Time pada Siklus Charge- Discharge Terhadap State Of Health (SOH) Baterai", "Program Studi": "Teknik Elektro", "Jenis Kegiatan": "Penelitian", "Dana": 25000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 78}, {"Ketua": "Rizal Kusuma Putra, M.T.", "Judul": "Rancang Bangun Unmanned Aerial Vehicle untuk Sistem Navigasi Otonom pada Lingkungan Kompleks Berbasis Visual Perception", "Program Studi": "Informatika", "Jenis Kegiatan": "Penelitian", "Dana": 25000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 79}, {"Ketua": "Thorikul Huda, S.T., M.T.", "Judul": "Pengembangan Drone Kargo Otonom Berbasis Visi untuk Pengiriman Paket di Kota Cerdas Nusantara", "Program Studi": "Teknik Elektro", "Jenis Kegiatan": "Penelitian", "Dana": 24570000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 80}, {"Ketua": "Yun Tonce Kusuma Priyanto, S.T., M.T.", "Judul": "Rancang Bangun Prototipe Mesin Pencacah Sampah Dual-Fungsi (Organik dan Plastik) Terintegrasi untuk Mendukung Sistem Pengelolaan Limbah Mandiri di ITK", "Program Studi": "Teknik Elektro", "Jenis Kegiatan": "Penelitian", "Dana": 25000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 81}, {"Ketua": "Yustina Fitriani, S.Pd., M.Pd.", "Judul": "Pengembangan Buku Ajar Bahasa Inggris Berbasis Kearifan Lokal Rumah Tradisional Lamin untuk Meningkatkan Pemahaman Membaca Pembelajar EFL", "Program Studi": "Informatika", "Jenis Kegiatan": "Penelitian", "Dana": 25000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 82}, {"Ketua": "Ir. Riovan Styx Roring, S.T., M.Kom", "Judul": "Pengembangan Minimum Viable Product Platform melalui Startup Hosting Rakyat untuk Mendukung Akselerasi Startup Tenant di IBT ITK", "Program Studi": "Bisnis Digital", "Jenis Kegiatan": "Penelitian", "Dana": 20000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 83}, {"Ketua": "M. Ihsan Alfani Putera, S.Tr.Kom, M.Kom", "Judul": "Implementasi Knowledge Management System (KMS) Berbasis AI untuk Pelayanan Perizinan pada DPMPTSP Kota Balikpapan dengan Metode Personal Extreme Programming", "Program Studi": "Sistem Informasi", "Jenis Kegiatan": "Penelitian", "Dana": 30000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 84}, {"Ketua": "Arif Wicaksono Septyanto, M.Kom", "Judul": "Pengembangan Aplikasi Mobile Tanamin Untuk Transparansi Dan Donasi CSR Dengan Metode Scrum", "Program Studi": "Sistem Informasi", "Jenis Kegiatan": "Penelitian", "Dana": 30000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 85}, {"Ketua": "Amalia Rizqi Utami, S.T., M.T.", "Judul": "Optimasi Produksi Olahan Lele Melalui Implementasi Teknologi Smart-Processing dan Sistem Manajemen Inventaris Digital", "Program Studi": "Teknik Elektro", "Jenis Kegiatan": "Penelitian", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 86}, {"Ketua": "Yuyun Tri Wiranti, S.Kom., M.MT.", "Judul": "Strategi Integrasi Branding Digital dan Inovasi Pangan Lokal dalam Optimalisasi Potensi Agrowisata Kang Bejo", "Program Studi": "Sistem Informasi", "Jenis Kegiatan": "Penelitian", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 87}, {"Ketua": "Rizky Amelia, S.Si., M.Han.", "Judul": "Rancang Bangun Sistem Dashboard Monitoring Deteksi Penyakit Daun Cabai Berbasis IoT dan Deep Learning sebagai Upaya Peningkatan Produktivitas Pertanian di Gapoktan Tani Makmur", "Program Studi": "Informatika", "Jenis Kegiatan": "Penelitian", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 88}, {"Ketua": "Andhika Giyantara, S.T., M.T.", "Judul": "Rancang Bangun Sistem Filter: Air Sumur Resapan Pada Kawasan Perumahan Bukit Anugerah Indah Melati", "Program Studi": "Teknik Elektro", "Jenis Kegiatan": "Penelitian", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 89}, {"Ketua": "Nur Fajri Azhar, S.Kom., M.Kom.", "Judul": "Pemanfaatan Website dan Platform Digital untuk Penguatan Layanan Sosial dan Administrasi Warga RT 55 Balikpapan", "Program Studi": "Informatika", "Jenis Kegiatan": "Penelitian", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 90}, {"Ketua": "Nursanti Novi Arisa, S.Pd., M.Kom.", "Judul": "Optimalisasi Pengolahan Produk Keripik Buah Melalui Evaluasi Produksi Dan Strategi Pemasaran Pada Kelompok Tani Km 24 Balikpapan Utara", "Program Studi": "Sistem Informasi", "Jenis Kegiatan": "Penelitian", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 91}, {"Ketua": "Nisa Rizqiya Fadhliana, S.Kom., M.T.", "Judul": "Implementasi Pembelajaran Inovatif Berbasis Teknologi di SDN 006 Balikpapan Timur", "Program Studi": "Informatika", "Jenis Kegiatan": "Penelitian", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 92}, {"Ketua": "Muchammad Chandra Cahyo Utomo M.Kom", "Judul": "Digitalisasi Sistem Informasi RT. 06 Kelurahan Damai Bahagia Berbasis Web untuk Pelayanan Administrasi dan Partisipasi Warga", "Program Studi": "Informatika", "Jenis Kegiatan": "Penelitian", "Dana": 3500000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 93}, {"Ketua": "Arif Wicaksono Septyanto, M.Kom", "Judul": "Optimalisasi Kawasan Kelompok Tani Harapan Sejahtera melalui Sistem Informasi Terpadu Berbasis Website dan Label Tanaman Berbasis QR Code", "Program Studi": "Sistem Informasi", "Jenis Kegiatan": "Penelitian", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 94}, {"Ketua": "Agung Prabowo, S.E., M.M.", "Judul": "Pengembangan Platform Galeri Digital Untuk Mendukung Pemasaran Produk Lokal UMKM di Kota Balikpapan", "Program Studi": "Bisnis Digital", "Jenis Kegiatan": "Penelitian", "Dana": 7135000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 95}, {"Ketua": "Hendy Indrawan Sunardi, S.Kom, M.Eng.", "Judul": "Digitalisasi Sistem Pendataan Pembayaran Gedung Seluruh Tenant Plaza Kebun Sayur Balikpapan", "Program Studi": "Sistem Informasi", "Jenis Kegiatan": "Penelitian", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 96}, {"Ketua": "Rosa Eliviani, S.Kom., M.T.", "Judul": "Pengembangan Bank Sampah untuk Mendukung Pengelolaan Sampah Berkelanjutan di RT 44 Sepinggan Pratama", "Program Studi": "Sistem Informasi", "Jenis Kegiatan": "Penelitian", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 97}, {"Ketua": "Dwi Nur Amalia, S.Kom., M.Kom.", "Judul": "Pengembangan Website Dan Strategi Promosi Media Sosial Untuk Meningkatkan Visibilitas Dan Branding Pupuk Semok", "Program Studi": "Sistem Informasi", "Jenis Kegiatan": "Penelitian", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 98}, {"Ketua": "Prasis Damai Nursyam Hamijaya, S.P., M.M", "Judul": "Optimalisasi Sistem Manajemen Pada Usaha Anggrek di Kota Balikpapan Melalui Pendekatan Adaptif", "Program Studi": "Bisnis Digital", "Jenis Kegiatan": "Penelitian", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 99}, {"Ketua": "Happy Aprillia, S.ST., M.T., M.Eng., Ph.D.", "Judul": "Peningkatan Produktivitas dan Daya Saing Buah Naga melalui Integrasi Automasi Perkebunan dan Branding Produk Olahan di RT 41 Kilo 21 Balikpapan", "Program Studi": "Teknik Elektro", "Jenis Kegiatan": "Penelitian", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 100}, {"Ketua": "Muhammad Agung Nursyeha, S.T., M.T.", "Judul": "Penanggulangan Hama Serangga pada Tanaman Melon melalui Inovasi Sistem Penyemprotan Pestisida Otomatis di Kebun Sumber Berkah Balikpapan", "Program Studi": "Teknik Elektro", "Jenis Kegiatan": "Penelitian", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 101}, {"Ketua": "Aninditya Anggari Nuryono, S.T., M.Eng.", "Judul": "Optimalisasi Pengelolaan Sampah Melalui Tempat Sampah Terpilah Dan Incinerator Sederhana", "Program Studi": "Informatika", "Jenis Kegiatan": "Penelitian", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 102}, {"Ketua": "Ir. Muhammad Ridho Dewanto, S.T., M.T.", "Judul": "Pengembangan Kandang Ayam Untuk Peningkatan Kualitas Ayam Di Panti Asuhan Nyai Walidah Dahlan, Balikpapan Timur", "Program Studi": "Teknik Elektro", "Jenis Kegiatan": "Penelitian", "Dana": 15000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 103}, {"Ketua": "Dwi Arief Prambudi, S.Kom., M.Kom", "Judul": "Mewujudkan Smart RT Melalui Digitalisasi Layanan di RT 02 Kelurahan Graha Indah Balikpapan Berbasis Website", "Program Studi": "Sistem Informasi", "Jenis Kegiatan": "Penelitian", "Dana": 20000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 104}, {"Ketua": "Yun Tonce Kusuma Priyanto, S.T., M.T.", "Judul": "Implementasi Teknologi PLTS Terpadu pada Kelompok Tani Tunas Harapan guna Mewujudkan Desa Mandiri Energi di Karang Joang Balikpapan Utara", "Program Studi": "Teknik Elektro", "Jenis Kegiatan": "Penelitian", "Dana": 20000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 105}, {"Ketua": "Firilia Filiana, S.T., M.T.", "Judul": "Implementasi Green Technology 3S (Smart Farming, Smart Fisheries, and Smart Energy) dalam Mewujudkan Karang Joang sebagai Desa Mandiri Energi", "Program Studi": "Teknik Elektro", "Jenis Kegiatan": "Penelitian", "Dana": 20000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 106}, {"Ketua": "BIMA PRIHASTO", "Judul": "Pengembangan Model Anti-Spoofing Countermeasure untuk Skenario Bahasa Indonesia Berbasis Sumber Daya Terbatas guna Meningkatkan Keamanan Otentikasi Suara", "Program Studi": "Manajemen Teknologi", "Jenis Kegiatan": "Penelitian", "Dana": 0, "Sumber Hibah": "Eksternal BIMA", "Status": "Tahap Usulan", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 107}, {"Ketua": "RIKI HERLIANSYAH", "Judul": "Estimasi Kepadatan Populasi Bekantan (Nasalis larvatus) Di Teluk Balikpapan Menggunakan Line Transect Distance Sampling: Baseline Data Untuk Konservasi", "Program Studi": "Manajemen Teknologi", "Jenis Kegiatan": "Penelitian", "Dana": 0, "Sumber Hibah": "Eksternal BIMA", "Status": "Tahap Usulan", "Jurusan": "JTIEB", "Jenis": "Penelitian", "id": 108}, {"Ketua": "Eka Krisna Santoso, S.Si, MBA", "Judul": "Pengembangan Portal Zona Integritas FSTI ITK: Digitalisasi Area Perubahan, Standar Pelayanan, dan Pengaduan Masyarakat Berbasis Web", "Program Studi": "Bisnis Digital", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 20000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Pengmas", "id": 109}, {"Ketua": "Nur Fajri Azhar, S.Kom., M.Kom.", "Judul": "Evolusi Sistem Informasi Penelitian dan Pengabdian Masyarakat (SIMPAS) melalui Implementasi Otomasi Approval Workflow", "Program Studi": "Informatika", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 25000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Pengmas", "id": 110}, {"Ketua": "Henokh Lugo Hariyanto, M.Sc.", "Judul": "Pengembangan Sistem Informasi Course Untuk Peningkatan Kapasitas Dan Keterampilan Masyarakat Balikpapan Menggunakan Metode Waterfall", "Program Studi": "Sistem Informasi", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 30000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Pengmas", "id": 111}, {"Ketua": "Adi Mahmud Jaya Marindra, S.T., M.Eng., Ph.D.", "Judul": "Pengenalan dan Edukasi Teknologi Internet of Things (IoT) bagi Siswa Sekolah oleh UKM IEEE Institut Teknologi Kalimantan Student Branch", "Program Studi": "Teknik Elektro", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Pengmas", "id": 112}, {"Ketua": "Vika Fitratunnany Insanittaqwa, S.Kom., M.Kom.", "Judul": "Pengembangan Wisata Edukasi Kang Bejo Balikpapan Berbasis Edukasi Pangan, Keamanan Lingkungan dan Digitalisasi Informasi", "Program Studi": "Sistem Informasi", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Pengmas", "id": 113}, {"Ketua": "Risty Jayanti Yuniar, S.T., M.T.", "Judul": "Pemberdayaan Kelompok Tani Mekar Maju Melalui Implementasi Alat Pengering Lada", "Program Studi": "Teknik Elektro", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Pengmas", "id": 114}, {"Ketua": "Darmansyah, S.Si., M.T.I", "Judul": "Pengembangan Website dan Sistem Informasi Sanitasi Lingkungan Berbasis Masyarakat sebagai Upaya Peningkatan Kebersihan dan Daya Tarik Wisata Meranti", "Program Studi": "Informatika", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Pengmas", "id": 115}, {"Ketua": "Riza Hadi Saputra, S.T., M.T.", "Judul": "Pemberdayaan Warga Rt 30 Karang Joang Melalui Pengembangan Lingkungan Informatif Dan Sehat Berbasis Tata Wilayah, Konstruksi, Dan Kelistrikan", "Program Studi": "Teknik Elektro", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Pengmas", "id": 116}, {"Ketua": "Boby Mugi Pratama, S.Si., M.Han.", "Judul": "Pendampingan Edukasi Pengolahan Sampah bagi Anak Sekolah Dasar melalui Pembuatan Komposter Aerob di Sekolah Dasar Negeri 004 Balikpapan Barat", "Program Studi": "Informatika", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Pengmas", "id": 117}, {"Ketua": "Rizal Kusuma Putra, M.T.", "Judul": "Pemberdayaan Sekolah Alam Balikpapan melalui Digitalisasi Informasi dan Media Promosi Berbasis Teknologi Informasi", "Program Studi": "Informatika", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Pengmas", "id": 118}, {"Ketua": "Eka Krisna Santoso, S.Si, MBA", "Judul": "Edukasi dan Implementasi WhatsApp Business sebagai Strategi Digitalisasi pada Komunitas UMKM Kelurahan Graha Indah", "Program Studi": "Bisnis Digital", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Pengmas", "id": 119}, {"Ketua": "Yustina Fitriani, S.Pd., M.Pd.", "Judul": "Pemberdayaan Masyarakat RT 27 Kelurahan Manggar melalui Sosialisasi dan Budidaya Tanaman Obat Keluarga (TOGA) Berbasis Platform Digital", "Program Studi": "Informatika", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Pengmas", "id": 120}, {"Ketua": "Luh Made Wisnu Satyaninggrat, S.Kom., M.T", "Judul": "Sinergi Digitalisasi Informasi Dan Edukasi Lingkungan: Pengembangan Website, Perpustakaan Digital, Dan Katalog Tanaman Qr Code Di Sdn 027 Balikpapan Utara", "Program Studi": "Bisnis Digital", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Pengmas", "id": 121}, {"Ketua": "Ir. I Putu Deny Arthawan Sugih Prabowo, S.Kom., M.Eng.", "Judul": "Optimalisasi Promosi Produk Ecoprint Hutan Lindung Sungai Wain Dengan Pengelolaan Media Sosial Dan Pelatihan Konten Kreatif Digital", "Program Studi": "Sistem Informasi", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 5228000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Pengmas", "id": 122}, {"Ketua": "Ir. Riovan Styx Roring, S.T., M.Kom", "Judul": "Pemberdayaan Umkm Kota Balikpapan Melalui Inovasi Sosial Berbasis Website E-Commerce", "Program Studi": "Bisnis Digital", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 10000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Pengmas", "id": 123}, {"Ketua": "Muh. Ikhsan Alif S, S.E.,M.Sc.", "Judul": "Pemberdayaan Ekonomi Masyarakat Melalui Inovasi Produk Lilin Aromaterapi Berbasis Minyak Jelantah Dan Penguatan Manajemen Usaha Digital Di Perumahan Atlantic Village Rt.63", "Program Studi": "Bisnis Digital", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 15000000, "Sumber Hibah": "Internal ITK", "Status": "Didanai", "Jurusan": "JTIEB", "Jenis": "Pengmas", "id": 124}, {"Ketua": "HAPPY APRILLIA", "Judul": "Peningkatan Daya Saing Buah Naga melalui Automasi Perkebunan dan Hilirisasi Produk Turunan berbasis Desain Kreatif di RT 41 Kilo 21 Balikpapan", "Program Studi": "Manajemen Teknologi", "Jenis Kegiatan": "Pengabdian Kepada Masyarakat", "Dana": 0, "Sumber Hibah": "Eksternal BIMA", "Status": "Tahap Usulan", "Jurusan": "JTIEB", "Jenis": "Pengmas", "id": 125}];
-        
         let rawData = [];
         if (localStorage.getItem('hibahData2026')) {
             rawData = JSON.parse(localStorage.getItem('hibahData2026'));
@@ -206,13 +235,11 @@
 
         function initDashboard() {
             populateProdiFilter();
-            
             document.getElementById('filterJurusan').addEventListener('change', applyFilters);
             document.getElementById('filterProdi').addEventListener('change', applyFilters);
             document.getElementById('filterJenis').addEventListener('change', applyFilters);
             document.getElementById('filterSumber').addEventListener('change', applyFilters);
             document.getElementById('searchInput').addEventListener('input', applyFilters);
-            
             updateDashboard();
         }
 
@@ -229,7 +256,6 @@
                 option.value = prodi;
                 option.textContent = prodi;
                 filterProdi.appendChild(option);
-                
                 const dataOption = document.createElement('option');
                 dataOption.value = prodi;
                 datalistProdi.appendChild(dataOption);
@@ -246,19 +272,15 @@
             currentData = rawData.filter(row => {
                 const matchJurusan = filterJurusan === 'All' || row.Jurusan === filterJurusan;
                 const matchProdi = filterProdi === 'All' || row['Program Studi'] === filterProdi;
-                
                 const formJenisMap = (row.Jenis === 'Pengmas' || row.Jenis === 'Pengabdian Kepada Masyarakat') ? 'Pengmas' : 'Penelitian';
                 const fJenis = filterJenis === 'Pengmas' ? 'Pengmas' : filterJenis;
                 const matchJenisFixed = filterJenis === 'All' || formJenisMap === fJenis;
-
                 const matchSumber = filterSumber === 'All' || row['Sumber Hibah'] === filterSumber;
                 const matchSearch = row.Judul.toLowerCase().includes(searchQ) || 
                                     row.Ketua.toLowerCase().includes(searchQ) || 
                                     row['Program Studi'].toLowerCase().includes(searchQ);
-                
                 return matchJurusan && matchProdi && matchJenisFixed && matchSumber && matchSearch;
             });
-
             updateDashboard();
         }
 
@@ -272,7 +294,6 @@
             const totalDana = currentData.reduce((sum, row) => sum + row.Dana, 0);
             const totalInternal = currentData.filter(r => r['Sumber Hibah'] === 'Internal ITK').reduce((sum, r) => sum + r.Dana, 0);
             const totalBima = currentData.filter(r => r['Sumber Hibah'] === 'Eksternal BIMA').reduce((sum, r) => sum + r.Dana, 0);
-
             document.getElementById('cardTotalDana').textContent = formatRupiah(totalDana);
             document.getElementById('cardTotalProyek').textContent = currentData.length + " Judul";
             document.getElementById('cardDanaInternal').textContent = formatRupiah(totalInternal);
@@ -282,16 +303,13 @@
         function updateTable() {
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
-            
             if(currentData.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center text-slate-500">Tidak ada data yang sesuai filter</td></tr>';
                 return;
             }
-
             currentData.forEach(row => {
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-50 transition-colors';
-                
                 let badgeJenis = (row.Jenis === 'Penelitian') ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700';
                 let displayJenis = (row.Jenis === 'Penelitian') ? 'Penelitian' : 'Pengmas';
                 let badgeSumber = (row['Sumber Hibah'] === 'Internal ITK') ? 'bg-emerald-100 text-emerald-700' : 'bg-purple-100 text-purple-700';
@@ -329,20 +347,8 @@
             const ctxBar = document.getElementById('barChart').getContext('2d');
             barChartInstance = new Chart(ctxBar, {
                 type: 'bar',
-                data: {
-                    labels: sortedProdi,
-                    datasets: [{
-                        label: 'Total Dana (Rp)',
-                        data: prodiData,
-                        backgroundColor: '#6366f1',
-                        borderRadius: 4
-                    }]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true, ticks: { callback: function(value) { return value / 1000000 + ' Jt'; } } } }
-                }
+                data: { labels: sortedProdi, datasets: [{ label: 'Total Dana (Rp)', data: prodiData, backgroundColor: '#6366f1', borderRadius: 4 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: function(value) { return value / 1000000 + ' Jt'; } } } } }
             });
 
             let sumInt = 0, sumBima = 0;
@@ -355,33 +361,187 @@
             const ctxPie = document.getElementById('pieChart').getContext('2d');
             pieChartInstance = new Chart(ctxPie, {
                 type: 'doughnut',
-                data: {
-                    labels: ['Internal ITK', 'Eksternal BIMA'],
-                    datasets: [{
-                        data: [sumInt, sumBima],
-                        backgroundColor: ['#10b981', '#8b5cf6'],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false, cutout: '60%',
-                    plugins: { legend: { position: 'bottom' } }
-                }
+                data: { labels: ['Internal ITK', 'Eksternal BIMA'], datasets: [{ data: [sumInt, sumBima], backgroundColor: ['#10b981', '#8b5cf6'], borderWidth: 0 }] },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: { legend: { position: 'bottom' } } }
             });
         }
         
-        // ==================== FITUR EKSPOR EXCEL (CSV COMPATIBLE) ====================
+        // ==================== TABS & KLASTERISASI MULTIDIMENSI ====================
+        function switchTab(tabName) {
+            ['Tema', 'Metode', 'Hasil'].forEach(t => {
+                document.getElementById(`btnTab${t}`).classList.remove('active');
+                document.getElementById(`grid${t}`).classList.add('hidden');
+            });
+            
+            document.getElementById(`btnTab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).classList.add('active');
+            document.getElementById(`grid${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).classList.remove('hidden');
+        }
+
+        function openRoadmap() {
+            document.getElementById('roadmapModal').classList.remove('hidden');
+            generateAllClusters();
+        }
+
+        function closeRoadmap() {
+            document.getElementById('roadmapModal').classList.add('hidden');
+        }
+
+        function generateAllClusters() {
+            // 1. Kamus Tema Topik (Seperti sebelumnya)
+            const dictTema = {
+                "Komputasi & Kecerdasan Buatan": {
+                    keywords: ["cerdas", "deteksi", "klasifikasi", "algoritma", "iot", "digital", "deep learning", "machine learning", "jaringan", "aplikasi", "sistem informasi", "web", "teknologi", "komputasi", "perangkat lunak", "otomatisasi", "sensor", "citra"],
+                    color: "border-blue-500", bg: "bg-blue-50", text: "text-blue-700", icon: "fa-laptop-code"
+                },
+                "Material Maju & Sains Terapan": {
+                    keywords: ["material", "nano", "implan", "lapisan", "baterai", "surya", "komposit", "kimia", "fisika", "tegangan", "listrik", "fotokatalis", "sintesis", "ekstrak", "termal", "sains"],
+                    color: "border-purple-500", bg: "bg-purple-50", text: "text-purple-700", icon: "fa-atom"
+                },
+                "Pemodelan, Matematika & Data": {
+                    keywords: ["spasial", "prediksi", "peramalan", "model", "persamaan diferensial", "matematika", "statistik", "risiko", "saham", "finansial", "aktuaria", "dinamika", "analisis data", "optimasi", "epidemiologi", "reaksi-difusi", "graf"],
+                    color: "border-emerald-500", bg: "bg-emerald-50", text: "text-emerald-700", icon: "fa-chart-line"
+                },
+                "Sosial, Masyarakat & Lingkungan": {
+                    keywords: ["pelatihan", "umkm", "masyarakat", "desa", "literasi", "sekolah", "guru", "siswa", "wisata", "edukasi", "pemberdayaan", "lingkungan", "limbah", "ekonomi", "bisnis"],
+                    color: "border-amber-500", bg: "bg-amber-50", text: "text-amber-700", icon: "fa-users"
+                }
+            };
+
+            // 2. Kamus Metode Penelitian
+            const dictMetode = {
+                "Pengembangan Sistem (R&D)": {
+                    keywords: ["pengembangan", "rancang bangun", "desain", "prototyping", "rancangan", "implementasi sistem"],
+                    color: "border-cyan-500", bg: "bg-cyan-50", text: "text-cyan-700", icon: "fa-cogs"
+                },
+                "Algoritma & AI (Machine/Deep Learning)": {
+                    keywords: ["deep learning", "machine learning", "gru-garch", "des-garch", "neural network", "klasifikasi otomatis", "algoritma cerdas", "metode silar", "yolo"],
+                    color: "border-rose-500", bg: "bg-rose-50", text: "text-rose-700", icon: "fa-brain"
+                },
+                "Eksperimen & Sintesis Laboratorium": {
+                    keywords: ["sintesis", "metode silar", "karakterisasi", "fabrikasi", "uji", "ekstraksi", "biokompatibilitas"],
+                    color: "border-fuchsia-500", bg: "bg-fuchsia-50", text: "text-fuchsia-700", icon: "fa-flask"
+                },
+                "Pemodelan, Spasial & Analisis Kuantitatif": {
+                    keywords: ["analisis spasial", "pemodelan matematika", "reaksi-difusi", "persamaan diferensial", "simulasi", "graf metrik", "analisis", "evaluasi", "perbandingan model"],
+                    color: "border-teal-500", bg: "bg-teal-50", text: "text-teal-700", icon: "fa-square-root-alt"
+                },
+                "Pendekatan Sosial & Kualitatif": {
+                    keywords: ["pelatihan", "sosialisasi", "pendampingan", "kualitatif", "studi kasus", "literasi", "penerapan"],
+                    color: "border-orange-500", bg: "bg-orange-50", text: "text-orange-700", icon: "fa-comments"
+                }
+            };
+
+            // 3. Kamus Target Hasil / Luaran
+            const dictHasil = {
+                "Prototipe / Produk / Aplikasi": {
+                    keywords: ["platform", "aplikasi", "sistem informasi", "prototipe", "alat", "website", "dashboard", "smart"],
+                    color: "border-indigo-500", bg: "bg-indigo-50", text: "text-indigo-700", icon: "fa-mobile-alt"
+                },
+                "Buku, Modul & Edukasi Masyarakat": {
+                    keywords: ["buku panduan", "modul", "pelatihan", "peningkatan mutu", "edukasi", "literasi digital", "kesadaran"],
+                    color: "border-pink-500", bg: "bg-pink-50", text: "text-pink-700", icon: "fa-book"
+                },
+                "Material Baru & Komponen Fisik": {
+                    keywords: ["material kandidat", "implan tulang", "lapisan tipis", "sel surya", "baterai", "nano-", "komposit", "cangkang"],
+                    color: "border-yellow-500", bg: "bg-yellow-50", text: "text-yellow-700", icon: "fa-cubes"
+                },
+                "Model, Kerangka Kerja & Publikasi": {
+                    keywords: ["model", "kajian", "pemetaan", "evaluasi", "financial distress", "return dan volatilitas", "peringatan dini", "analisis spasial"],
+                    color: "border-sky-500", bg: "bg-sky-50", text: "text-sky-700", icon: "fa-file-alt"
+                }
+            };
+
+            function processClustering(dictionary, gridId, defaultLabel) {
+                let clusters = {};
+                Object.keys(dictionary).forEach(key => {
+                    clusters[key] = { prodi: new Set(), count: 0, keywordsHit: {} };
+                });
+                clusters[defaultLabel] = { prodi: new Set(), count: 0, keywordsHit: {}, color: "border-slate-300", bg: "bg-slate-50", text: "text-slate-600", icon: "fa-question-circle" };
+
+                currentData.forEach(row => {
+                    let text = (row.Judul + " " + row['Program Studi'] + " " + row.Jenis).toLowerCase();
+                    let matchedKey = defaultLabel;
+                    let highestMatches = 0;
+                    let topWord = "";
+
+                    Object.keys(dictionary).forEach(key => {
+                        let matches = 0;
+                        let localTopWord = "";
+                        dictionary[key].keywords.forEach(kw => {
+                            if (text.includes(kw)) {
+                                matches++;
+                                localTopWord = kw;
+                            }
+                        });
+                        if (matches > highestMatches) {
+                            highestMatches = matches;
+                            matchedKey = key;
+                            topWord = localTopWord;
+                        }
+                    });
+
+                    clusters[matchedKey].prodi.add(row['Program Studi']);
+                    clusters[matchedKey].count += 1;
+                    if (topWord) {
+                        clusters[matchedKey].keywordsHit[topWord] = (clusters[matchedKey].keywordsHit[topWord] || 0) + 1;
+                    }
+                });
+
+                const grid = document.getElementById(gridId);
+                grid.innerHTML = '';
+
+                Object.keys(clusters).forEach(key => {
+                    let cluster = clusters[key];
+                    if (cluster.count === 0) return; 
+
+                    let isOther = key === defaultLabel;
+                    let style = isOther ? {color: cluster.color, bg: cluster.bg, text: cluster.text, icon: cluster.icon} : dictionary[key];
+                    
+                    let topKeywordsArr = Object.entries(cluster.keywordsHit).sort((a,b) => b[1] - a[1]).slice(0, 3).map(k => k[0]);
+                    let keywordBadges = topKeywordsArr.map(kw => `<span class="bg-white border border-slate-200 px-2 py-1 rounded text-[10px] text-slate-600 mr-1 mb-1 inline-block capitalize">${kw}</span>`).join('');
+                    if(keywordBadges === "") keywordBadges = "<span class='text-xs text-slate-400 italic'>Multidimensi / Lainnya</span>";
+
+                    let prodiBadges = Array.from(cluster.prodi).map(p => `<span class="${style.bg} ${style.text} px-2 py-1 rounded text-[10px] font-medium mr-1 mb-1 inline-block border ${style.color} border-opacity-30">${p}</span>`).join('');
+
+                    let cardHTML = `
+                        <div class="bg-white border-t-4 ${style.color} rounded-xl p-4 shadow-sm border border-slate-200">
+                            <div class="flex items-center gap-3 mb-3">
+                                <div class="${style.bg} ${style.text} w-8 h-8 rounded-lg flex items-center justify-center text-sm">
+                                    <i class="fas ${style.icon}"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-sm text-slate-800 leading-tight">${key}</h3>
+                                    <p class="text-[11px] text-slate-500 mt-0.5">${cluster.count} Proyek</p>
+                                </div>
+                            </div>
+                            <div class="mb-2">
+                                <p class="text-[10px] font-semibold text-slate-400 mb-1 uppercase">Sinergi Prodi:</p>
+                                <div class="flex flex-wrap">${prodiBadges}</div>
+                            </div>
+                            <div>
+                                <p class="text-[10px] font-semibold text-slate-400 mb-1 uppercase">Kata Kunci Deteksi:</p>
+                                <div class="flex flex-wrap">${keywordBadges}</div>
+                            </div>
+                        </div>
+                    `;
+                    grid.innerHTML += cardHTML;
+                });
+            }
+
+            // Eksekusi pemetaan untuk ke-3 tab
+            processClustering(dictTema, 'gridTema', "Tema Lainnya");
+            processClustering(dictMetode, 'gridMetode', "Metode Campuran / Lainnya");
+            processClustering(dictHasil, 'gridHasil', "Luaran Umum / Lainnya");
+        }
+
+        // ==================== EKSPOR EXCEL ====================
         function exportToExcel() {
             if (currentData.length === 0) {
                 alert("Tidak ada data untuk diekspor!");
                 return;
             }
-            
-            // Menggunakan tanda pengenal sep=; dan BOM agar terbaca rapi oleh Excel regional Indonesia/Global
             let csvContent = "\uFEFFsep=;\nKetua Pengusul;Judul Proyek;Jurusan;Program Studi;Jenis Kegiatan;Sumber Hibah;Dana Pendanaan (Rp)\n";
-            
             currentData.forEach(row => {
-                // Bersihkan teks dari tanda kutip ganda internal untuk mencegah broken layout di excel
                 const ketua = `"${row.Ketua.replace(/"/g, '""')}"`;
                 const judul = `"${row.Judul.replace(/"/g, '""')}"`;
                 const jurusan = `"${row.Jurusan.replace(/"/g, '""')}"`;
@@ -389,23 +549,20 @@
                 const jenis = `"${(row.Jenis === 'Penelitian' ? 'Penelitian' : 'Pengmas')}"`;
                 const sumber = `"${row['Sumber Hibah'].replace(/"/g, '""')}"`;
                 const dana = row.Dana;
-                
                 csvContent += `${ketua};${judul};${jurusan};${prodi};${jenis};${sumber};${dana}\n`;
             });
-            
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             const url = URL.createObjectURL(blob);
-            
-            // Set nama file sesuai filter atau default
             link.setAttribute("href", url);
-            link.setAttribute("download", "Ekspor_Data_Hibah_2026.csv");
+            link.setAttribute("download", "Ekspor_Data_Hibah_Fakultas.csv");
             link.style.visibility = 'hidden';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
         }
 
+        // ==================== CRUD ====================
         function openModal() {
             document.getElementById('dataModal').classList.remove('hidden');
             document.getElementById('modalTitle').textContent = "Tambah Data Hibah";
@@ -464,7 +621,6 @@
                 const maxId = rawData.reduce((max, p) => p.id > max ? p.id : max, 0);
                 newData.id = maxId + 1;
                 newData.Status = "Baru Ditambahkan"; 
-                
                 rawData.unshift(newData); 
             }
 
